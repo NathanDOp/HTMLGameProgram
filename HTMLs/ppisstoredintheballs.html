@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Windows Lockdown Screen</title>
+<style>
+  /* Reset and global styles */
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none; /* prevent text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+  }
+
+  #lock-container {
+    background: rgba(0,0,0,0.85);
+    padding: 30px 40px;
+    border-radius: 15px;
+    box-shadow: 0 0 30px 10px #0d1b35;
+    text-align: center;
+    max-width: 400px;
+    width: 90vw;
+  }
+
+  h1 {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  p {
+    font-weight: 300;
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+  }
+
+  input[type="password"] {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2rem;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+  }
+
+  button {
+    width: 100%;
+    padding: 15px;
+    background: #00b894;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  button:hover, button:focus {
+    background: #019875;
+  }
+
+  #message {
+    margin-top: 20px;
+    font-size: 1.1rem;
+    height: 1.3rem;
+  }
+
+  /* Fullscreen always on top simulation */
+  body.locked {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 999999;
+  }
+
+  /* Responsive small screens */
+  @media (max-width: 400px) {
+    #lock-container {
+      padding: 20px 20px;
+    }
+    h1 {
+      font-size: 2rem;
+    }
+  }
+</style>
+</head>
+<body class="locked" oncontextmenu="return false;" onkeydown="return blockKeys(event);" onmousedown="return false;">
+  <div id="lock-container" role="dialog" aria-modal="true" aria-labelledby="lock-title">
+    <h1 id="lock-title">ACCESS LOCKED</h1>
+    <p>Enter your passkey to unlock</p>
+    <input id="passkey" type="password" autocomplete="off" aria-describedby="message" aria-label="Passkey input" />
+    <button id="unlock-btn" aria-label="Unlock Button">Unlock</button>
+    <div id="message" role="alert" aria-live="assertive"></div>
+  </div>
+
+  <script>
+    // Hardcoded passkey, you can change this.
+    const PASSKEY = 'BiggestWeenus8008132';
+
+    // DOM Elements
+    const passkeyInput = document.getElementById('passkey');
+    const unlockBtn = document.getElementById('unlock-btn');
+    const messageDiv = document.getElementById('message');
+
+    // Autofocus input on load
+    passkeyInput.focus();
+
+    // Block common keys to prevent switching apps or opening menus
+    function blockKeys(e) {
+        // Key codes for: Alt+Tab(18+9), Windows key(91, 92), Ctrl+Esc(17+27), Alt+F4(18+115)
+        // Blocking Ctrl+Shift+Esc and others partially possible. Ctrl+Alt+Del cannot be blocked by JS.
+        // We block common key combos here: 
+        if (
+            e.key === 'Tab' && e.altKey ||  // Alt + Tab
+            e.key === 'Escape' && e.ctrlKey || // Ctrl + Esc
+            (e.key === 'F4' && e.altKey) ||    // Alt + F4
+            e.key === 'Meta' || // Windows key
+            e.key === 'ContextMenu' || // Context menu key
+            (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'escape') // Ctrl + Shift + Esc
+        ) {
+            e.preventDefault();
+            return false;
+        }
+        // Block F11 (fullscreen toggle) to avoid exiting fullscreen
+        if(e.key === 'F11') {
+          e.preventDefault();
+          return false;
+        }
+    }
+
+    // Unlock function
+    function unlock() {
+      const input = passkeyInput.value;
+      if(input === PASSKEY) {
+        messageDiv.style.color = '#00ff99';
+        messageDiv.textContent = 'Access granted. Unlocking...';
+        document.body.classList.remove('locked');
+        // Remove event handlers blocking keys and mouse
+        document.body.onkeydown = null;
+        document.body.onmousedown = null;
+        document.body.oncontextmenu = null;
+        // Clear screen after 1 second
+        setTimeout(() => {
+          document.getElementById('lock-container').innerHTML = '<h1>Welcome back!</h1>';
+          document.body.style.background = 'linear-gradient(135deg, #56ab2f, #a8e063)';
+          document.body.style.color = '#000';
+        }, 1000);
+      } else {
+        messageDiv.style.color = '#ff4c4c';
+        messageDiv.textContent = 'Incorrect passkey. Try again.';
+        passkeyInput.value = '';
+        passkeyInput.focus();
+      }
+    }
+
+    // Attach click and Enter key event
+    unlockBtn.addEventListener('click', unlock);
+    passkeyInput.addEventListener('keydown', function(e) {
+      if(e.key === 'Enter') {
+        unlock();
+      }
+    });
+
+    // Attempt fullscreen on load (some browsers may block)
+    window.onload = () => {
+      if(document.body.requestFullscreen) {
+        document.body.requestFullscreen().catch(() => {});
+      } else if(document.body.webkitRequestFullscreen) {
+        document.body.webkitRequestFullscreen().catch(() => {});
+      }
+    };
+  </script>
+</body>
+</html>
+

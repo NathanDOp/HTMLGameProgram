@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Red Dot Clicker Game</title>
+<style>
+  /* Reset and base styles */
+  * {
+    box-sizing: border-box;
+  }
+  body, html {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #menu, #game, #game-over {
+    max-width: 420px;
+    width: 90vw;
+    background: #1f1f1f;
+    border-radius: 16px;
+    box-shadow: 0 0 30px #ff4444aa;
+    padding: 20px 25px;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0 0 15px 0;
+    font-weight: 800;
+    color: #ff4444;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  select {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    background: #2a2a2a;
+    color: #eee;
+    margin-bottom: 20px;
+    transition: background 0.2s ease;
+  }
+
+  select:hover, select:focus {
+    background: #3f3f3f;
+  }
+
+  button {
+    background: #ff4444;
+    border: none;
+    border-radius: 12px;
+    padding: 15px 30px;
+    color: white;
+    font-weight: 700;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  button:hover, button:focus {
+    background: #cc3636;
+  }
+
+  #instructions {
+    font-weight: 300;
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+    line-height: 1.4;
+    color: #bbb;
+  }
+
+  #game {
+    display: none;
+    position: relative;
+    height: 480px;
+    user-select: none;
+  }
+
+  #play-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #330000, #660000);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .dot {
+    position: absolute;
+    background-color: #ff4444;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ff0000cc;
+    transition: transform 0.15s ease;
+  }
+  .dot:hover {
+    transform: scale(1.2);
+  }
+
+  #scoreboard {
+    margin-top: 12px;
+    color: #ff9999;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  #timer {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #ff6666;
+  }
+
+  #game-over {
+    display: none;
+  }
+
+  #final-score {
+    font-size: 1.6rem;
+    margin-bottom: 10px;
+  }
+
+  #high-score {
+    color: #ff6666;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+
+  #restart-btn {
+    background: #991111;
+  }
+
+  #restart-btn:hover, #restart-btn:focus {
+    background: #770000;
+  }
+
+  /* Mobile adjustments */
+  @media (max-width: 400px) {
+    #game {
+      height: 350px;
+    }
+    .dot {
+      width: 26px;
+      height: 26px;
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Menu -->
+  <section id="menu" aria-label="Game menu">
+    <h1>Red Dot Clicker</h1>
+    <p id="instructions">
+      Select difficulty and click start.<br />
+      Click the red dots as fast as you can before time runs out.<br />
+      Each dot clicked is 1 point. High scores saved per difficulty.
+    </p>
+    <label for="difficulty-select">Difficulty:</label>
+    <select id="difficulty-select" aria-describedby="instructions">
+      <option value="easy">Easy (30 sec)</option>
+      <option value="medium">Medium (15 sec)</option>
+      <option value="hard">Hard (7 sec)</option>
+    </select>
+    <button id="start-btn">Start Game</button>
+  </section>
+
+  <!-- Game -->
+  <section id="game" aria-label="Game area" tabindex="0">
+    <div id="play-area" aria-live="polite" aria-atomic="true"></div>
+    <div id="scoreboard">
+      <span>Score: <span id="score">0</span></span>
+      <span>Time Left: <span id="timer">0</span>s</span>
+    </div>
+  </section>
+
+  <!-- Game Over -->
+  <section id="game-over" aria-label="Game over screen" tabindex="0">
+    <h1>Time's up!</h1>
+    <p id="final-score"></p>
+    <p id="high-score"></p>
+    <button id="restart-btn">Play Again</button>
+  </section>
+
+<script>
+  // Difficulty settings
+  const difficulties = {
+    easy: 30,
+    medium: 15,
+    hard: 7
+  };
+
+  // DOM references
+  const menu = document.getElementById('menu');
+  const game = document.getElementById('game');
+  const gameOverScreen = document.getElementById('game-over');
+  const playArea = document.getElementById('play-area');
+  const scoreDisplay = document.getElementById('score');
+  const timerDisplay = document.getElementById('timer');
+  const difficultySelect = document.getElementById('difficulty-select');
+  const startBtn = document.getElementById('start-btn');
+  const finalScoreText = document.getElementById('final-score');
+  const highScoreText = document.getElementById('high-score');
+  const restartBtn = document.getElementById('restart-btn');
+
+  let score = 0;
+  let timeLeft = 0;
+  let timerId = null;
+  let dotTimeout = null;
+  let currentDifficulty = 'easy';
+
+  // Utility: get random integer [min, max]
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function clearDots() {
+    while(playArea.firstChild) {
+      playArea.removeChild(playArea.firstChild);
+    }
+  }
+
+  // Create and add a clickable red dot at random position inside playArea
+  function createDot() {
+    clearDots();
+    const dot = document.createElement('div');
+    dot.classList.add('dot');
+    const rect = playArea.getBoundingClientRect();
+
+    // Keep dot fully inside the area
+    const maxX = rect.width - 32;
+    const maxY = rect.height - 32;
+
+    const x = randInt(0, maxX);
+    const y = randInt(0, maxY);
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+
+    // Click increments score, creates new dot immediately
+    dot.addEventListener('click', () => {
+      score++;
+      scoreDisplay.textContent = score;
+      createDot(); // spawn next dot immediately
+    });
+
+    playArea.appendChild(dot);
+  }
+
+  // Timer countdown and game tick
+  function tick() {
+    if (timeLeft <= 0) {
+      endGame();
+      return;
+    }
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+
+    // Continue ticking every 1 second
+    timerId = setTimeout(tick, 1000);
+  }
+
+  // Start the game
+  function startGame() {
+    currentDifficulty = difficultySelect.value;
+    timeLeft = difficulties[currentDifficulty];
+    score = 0;
+    scoreDisplay.textContent = score;
+    timerDisplay.textContent = timeLeft;
+
+    menu.style.display = 'none';
+    game.style.display = 'block';
+    gameOverScreen.style.display = 'none';
+
+    playArea.focus();
+
+    createDot();
+    timerId = setTimeout(tick, 1000);
+  }
+
+  // End game and show results
+  function endGame() {
+    clearTimeout(timerId);
+    clearDots();
+
+    game.style.display = 'none';
+    gameOverScreen.style.display = 'block';
+
+    finalScoreText.textContent = `Your score: ${score}`;
+
+    // Get current high score for difficulty
+    const highscoreKey = 'highscore_' + currentDifficulty;
+    let highscore = parseInt(localStorage.getItem(highscoreKey)) || 0;
+    if (score > highscore) {
+      localStorage.setItem(highscoreKey, score);
+      highscore = score;
+    }
+    highScoreText.textContent = `High score (${currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1)}): ${highscore}`;
+  }
+
+  // Restart game from Game Over screen
+  restartBtn.addEventListener('click', () => {
+    menu.style.display = 'block';
+    gameOverScreen.style.display = 'none';
+  });
+
+  // Start button listener
+  startBtn.addEventListener('click', () => {
+    startGame();
+  });
+
+</script>
+</body>
+</html>
+
